@@ -4,15 +4,12 @@ import (
 	"log"
 
 	"github.com/micro/cli"
-	proto "github.com/pydio/config-srv/proto/config"
 	"github.com/micro/go-micro"
-
-	"github.com/pydio/config-srv/config"
-	"github.com/pydio/config-srv/handler"
-
-	// db
-	"github.com/pydio/config-srv/db"
-	"github.com/pydio/config-srv/db/mysql"
+	"github.com/printfcoder/config-srv/config"
+	"github.com/printfcoder/config-srv/db"
+	"github.com/printfcoder/config-srv/db/mysql"
+	"github.com/printfcoder/config-srv/handler"
+	proto "github.com/printfcoder/config-srv/proto/config"
 )
 
 func main() {

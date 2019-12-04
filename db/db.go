@@ -3,7 +3,7 @@ package db
 import (
 	"errors"
 
-	proto "github.com/pydio/config-srv/proto/config"
+	proto "github.com/printfcoder/config-srv/proto/config"
 )
 
 type DB interface {

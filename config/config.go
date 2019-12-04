@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/micro/go-micro/client"
+	proto "github.com/printfcoder/config-srv/proto/config"
 	"github.com/pydio/go-os/config"
-
-	proto "github.com/pydio/config-srv/proto/config"
 	"golang.org/x/net/context"
 )
 

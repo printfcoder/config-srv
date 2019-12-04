@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pydio/config-srv/db"
-	proto "github.com/pydio/config-srv/proto/config"
-	proto2 "github.com/pydio/go-os/config/proto"
-
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/printfcoder/config-srv/db"
+	proto "github.com/printfcoder/config-srv/proto/config"
+	proto2 "github.com/pydio/go-os/config/proto"
 )
 
 var (
