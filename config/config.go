@@ -1,11 +1,16 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
+	"hash"
 	"sync"
 	"time"
 
+	"github.com/imdario/mergo"
 	"github.com/micro/go-micro/client"
+	"github.com/micro/go-micro/config/reader"
+	"github.com/micro/go-micro/config/source"
 	proto "github.com/printfcoder/config-srv/proto/config"
 	"github.com/pydio/go-os/config"
 	"golang.org/x/net/context"
@@ -16,7 +21,6 @@ var (
 	PathSplitter = "/"
 	WatchTopic   = "micro.config.watch"
 
-	reader   config.Reader
 	mtx      sync.RWMutex
 	watchers = make(map[string][]*watcher)
 )
@@ -59,13 +63,39 @@ func (w *watcher) Stop() error {
 	return nil
 }
 
-func Init() error {
-	reader = config.NewReader()
-	return nil
-}
+func Parse(changes ...*source.ChangeSet) (*config.ChangeSet, error) {
+	var merged map[string]interface{}
 
-func Parse(ch ...*config.ChangeSet) (*config.ChangeSet, error) {
-	return reader.Parse(ch...)
+	for _, m := range changes {
+		if len(m.Data) == 0 {
+			m.Data = []byte(`{}`)
+		}
+
+		var data map[string]interface{}
+		if err := json.Unmarshal(m.Data, &data); err != nil {
+			return nil, err
+		}
+		if err := mergo.Map(&merged, data); err != nil {
+			return nil, err
+		}
+	}
+
+	b, err := json.Marshal(merged)
+	if err != nil {
+		return nil, err
+	}
+
+	h, err := hash.Hash(merged, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config.ChangeSet{
+		Timestamp: time.Now(),
+		Data:      b,
+		Checksum:  fmt.Sprintf("%x", h),
+		Source:    "json",
+	}, nil
 }
 
 func Values(ch *config.ChangeSet) (config.Values, error) {

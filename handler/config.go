@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	conf "github.com/micro/go-micro/config"
+	"github.com/micro/go-micro/config/source"
 	"github.com/micro/go-micro/errors"
+	proto2 "github.com/micro/go-plugins/config/source/mucp/proto"
 	"github.com/printfcoder/config-srv/config"
 	"github.com/printfcoder/config-srv/db"
 	proto "github.com/printfcoder/config-srv/proto/config"
-	proto2 "github.com/pydio/go-os/config/proto"
 	"golang.org/x/net/context"
 )
 
@@ -36,7 +36,7 @@ func (c *Config) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.Re
 
 	rsp.Change.Path = req.Path
 
-	values, err := config.Values(&conf.ChangeSet{
+	values, err := config.Values(&source.ChangeSet{
 		Timestamp: time.Unix(ch.ChangeSet.Timestamp, 0),
 		Data:      []byte(ch.ChangeSet.Data),
 		Checksum:  ch.ChangeSet.Checksum,
@@ -76,7 +76,7 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 	if len(req.Change.Path) > 0 {
 		// Unpack the data as a go type
 		var data interface{}
-		vals, err := config.Values(&conf.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
+		vals, err := config.Values(&source.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -85,7 +85,7 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 		}
 
 		// Since it's a create request, make new base value
-		values, err := config.Values(&conf.ChangeSet{Data: []byte(`{}`)})
+		values, err := config.Values(&source.ChangeSet{Data: []byte(`{}`)})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -94,7 +94,7 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 		values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
 
 		// Create the new change
-		newChange, err := config.Parse(&conf.ChangeSet{Data: values.Bytes()})
+		newChange, err := config.Parse(&source.ChangeSet{Data: values.Bytes()})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -139,20 +139,20 @@ func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *prot
 		return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
 	}
 
-	change := &conf.ChangeSet{
+	change := &source.ChangeSet{
 		Timestamp: time.Unix(ch.ChangeSet.Timestamp, 0),
 		Data:      []byte(ch.ChangeSet.Data),
 		Checksum:  ch.ChangeSet.Checksum,
 		Source:    ch.ChangeSet.Source,
 	}
 
-	var newChange *conf.ChangeSet
+	var newChange *source.ChangeSet
 
 	// Set the change at a particular path
 	if len(req.Change.Path) > 0 {
 		// Unpack the data as a go type
 		var data interface{}
-		vals, err := config.Values(&conf.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
+		vals, err := config.Values(&source.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -170,13 +170,13 @@ func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *prot
 		values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
 
 		// Create a new change
-		newChange, err = config.Parse(&conf.ChangeSet{Data: values.Bytes()})
+		newChange, err = config.Parse(&source.ChangeSet{Data: values.Bytes()})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
 		}
 	} else {
 		// No path specified, business as usual
-		newChange, err = config.Parse(change, &conf.ChangeSet{
+		newChange, err = config.Parse(change, &source.ChangeSet{
 			Timestamp: time.Unix(req.Change.ChangeSet.Timestamp, 0),
 			Data:      []byte(req.Change.ChangeSet.Data),
 			Checksum:  req.Change.ChangeSet.Checksum,
@@ -243,7 +243,7 @@ func (c *Config) Delete(ctx context.Context, req *proto.DeleteRequest, rsp *prot
 	}
 
 	// Get the current config as values
-	values, err := config.Values(&conf.ChangeSet{
+	values, err := config.Values(&source.ChangeSet{
 		Timestamp: time.Unix(ch.ChangeSet.Timestamp, 0),
 		Data:      []byte(ch.ChangeSet.Data),
 		Checksum:  ch.ChangeSet.Checksum,
@@ -257,7 +257,7 @@ func (c *Config) Delete(ctx context.Context, req *proto.DeleteRequest, rsp *prot
 	values.Del(strings.Split(req.Change.Path, config.PathSplitter)...)
 
 	// Create a change record from the values
-	change, err := config.Parse(&conf.ChangeSet{Data: values.Bytes()})
+	change, err := config.Parse(&source.ChangeSet{Data: values.Bytes()})
 	if err != nil {
 		return errors.InternalServerError("go.micro.srv.config.Delete", err.Error())
 	}
