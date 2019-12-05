@@ -9,7 +9,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/printfcoder/config-srv/db"
 	proto "github.com/printfcoder/config-srv/proto/config"
-	proto2 "github.com/pydio/go-os/config/proto"
 )
 
 var (
@@ -64,15 +63,22 @@ func (m *mysql) Init() error {
 
 	parts := strings.Split(Url, "/")
 	if len(parts) != 2 {
-		return errors.New("Invalid database url")
+		return errors.New("Invalid database url ")
 	}
 
 	if len(parts[1]) == 0 {
-		return errors.New("Invalid database name")
+		return errors.New("Invalid database name ")
+	}
+
+	var paramParts []string
+	if strings.Contains(Url, "?") {
+		paramParts = strings.Split(parts[1], "?")
+		parts[1] = paramParts[0]
+		paramParts = paramParts[1:]
 	}
 
 	url := parts[0]
-	database := parts[1]
+	database := "`" + parts[1] + "`"
 
 	if d, err = sql.Open("mysql", url+"/"); err != nil {
 		return err
@@ -155,7 +161,7 @@ func (m *mysql) Read(id string) (*proto.Change, error) {
 	}
 
 	change := &proto.Change{
-		ChangeSet: &proto2.ChangeSet{},
+		ChangeSet: &proto.ChangeSet{},
 	}
 
 	r := st["read"].QueryRow(id)
@@ -263,7 +269,7 @@ func (m *mysql) Search(id, author string, limit, offset int64) ([]*proto.Change,
 
 	for r.Next() {
 		change := &proto.Change{
-			ChangeSet: &proto2.ChangeSet{},
+			ChangeSet: &proto.ChangeSet{},
 		}
 		if err := r.Scan(
 			&change.Id,
@@ -321,7 +327,7 @@ func (m *mysql) AuditLog(from, to, limit, offset int64, reverse bool) ([]*proto.
 
 		log := &proto.ChangeLog{
 			Change: &proto.Change{
-				ChangeSet: &proto2.ChangeSet{},
+				ChangeSet: &proto.ChangeSet{},
 			},
 		}
 		if err := r.Scan(

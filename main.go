@@ -21,7 +21,7 @@ func main() {
 			cli.StringFlag{
 				Name:   "database_url",
 				EnvVar: "DATABASE_URL",
-				Usage:  "The database URL e.g root@tcp(127.0.0.1:3306)/trace",
+				Usage:  "The database URL e.g root@tcp(127.0.0.1:3306)/trace?charset=utf8&loc=Asia",
 			},
 		),
 		// Add for MySQL configuration
@@ -38,10 +38,6 @@ func main() {
 
 	// subcriber to watches
 	service.Server().Subscribe(service.Server().NewSubscriber(config.WatchTopic, config.Watcher))
-
-	if err := config.Init(); err != nil {
-		log.Fatal(err)
-	}
 
 	if err := db.Init(); err != nil {
 		log.Fatal(err)

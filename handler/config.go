@@ -1,66 +1,37 @@
 package handler
 
 import (
-	"strings"
+	"context"
+	"fmt"
 	"time"
 
-	"github.com/micro/go-micro/config/source"
-	"github.com/micro/go-micro/errors"
-	proto2 "github.com/micro/go-plugins/config/source/mucp/proto"
 	"github.com/printfcoder/config-srv/config"
 	"github.com/printfcoder/config-srv/db"
 	proto "github.com/printfcoder/config-srv/proto/config"
-	"golang.org/x/net/context"
 )
 
 type Config struct{}
 
-func (c *Config) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
+func (c *Config) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) (err error) {
 	if len(req.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Read", "invalid id")
+		return fmt.Errorf("[Read] config srv read err: invalid id")
 	}
 
-	ch, err := db.Read(req.Id)
+	rsp.Change, err = db.Read(req.Id)
 	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Read", err.Error())
+		return fmt.Errorf("[Read] config srv read err: %s", err)
 	}
-
-	// Set response
-	rsp.Change = ch
-
-	if len(req.Path) == 0 {
-		rsp.Change.Path = ""
-		rsp.Change.Timestamp = 0
-		return nil
-	}
-
-	rsp.Change.Path = req.Path
-
-	values, err := config.Values(&source.ChangeSet{
-		Timestamp: time.Unix(ch.ChangeSet.Timestamp, 0),
-		Data:      []byte(ch.ChangeSet.Data),
-		Checksum:  ch.ChangeSet.Checksum,
-		Source:    ch.ChangeSet.Source,
-	})
-	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Read", err.Error())
-	}
-
-	parts := strings.Split(req.Path, config.PathSplitter)
-
-	// we just want to pass back bytes
-	rsp.Change.ChangeSet.Data = string(values.Get(parts...).Bytes())
 
 	return nil
 }
 
-func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *proto.CreateResponse) error {
+func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *proto.CreateResponse) (err error) {
 	if req.Change == nil || req.Change.ChangeSet == nil {
-		return errors.BadRequest("go.micro.srv.config.Create", "invalid change")
+		return fmt.Errorf("[Create] config srv create err: invalid change")
 	}
 
 	if len(req.Change.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Create", "invalid id")
+		return fmt.Errorf("[Create] config srv create err: invalid id")
 	}
 
 	if req.Change.Timestamp == 0 {
@@ -71,58 +42,22 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 		req.Change.ChangeSet.Timestamp = time.Now().Unix()
 	}
 
-	// Set the change at a particular path
-	// Since its a create request we have to build the path
-	if len(req.Change.Path) > 0 {
-		// Unpack the data as a go type
-		var data interface{}
-		vals, err := config.Values(&source.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
-		}
-		if err := vals.Get().Scan(&data); err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
-		}
-
-		// Since it's a create request, make new base value
-		values, err := config.Values(&source.ChangeSet{Data: []byte(`{}`)})
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
-		}
-
-		// Set the data at path
-		values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
-
-		// Create the new change
-		newChange, err := config.Parse(&source.ChangeSet{Data: values.Bytes()})
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
-		}
-
-		req.Change.ChangeSet = &proto2.ChangeSet{
-			Timestamp: newChange.Timestamp.Unix(),
-			Data:      string(newChange.Data),
-			Checksum:  newChange.Checksum,
-			Source:    newChange.Source,
-		}
-	}
-
 	if err := db.Create(req.Change); err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
+		return fmt.Errorf("[Create] config srv create err: %s", err)
 	}
 
-	config.Publish(ctx, &proto.WatchResponse{Id: req.Change.Id, ChangeSet: req.Change.ChangeSet})
+	_ = config.Publish(ctx, &proto.WatchResponse{Id: req.Change.Id, ChangeSet: req.Change.ChangeSet})
 
 	return nil
 }
 
 func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *proto.UpdateResponse) error {
 	if req.Change == nil || req.Change.ChangeSet == nil {
-		return errors.BadRequest("go.micro.srv.config.Update", "invalid change")
+		return fmt.Errorf("[Update] config srv update err: invalid change")
 	}
 
 	if len(req.Change.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Update", "invalid id")
+		return fmt.Errorf("[Update] config srv update err: invalid id")
 	}
 
 	if req.Change.Timestamp == 0 {
@@ -134,72 +69,16 @@ func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *prot
 	}
 
 	// Get the current change set
-	ch, err := db.Read(req.Change.Id)
+	_, err := db.Read(req.Change.Id)
 	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
-	}
-
-	change := &source.ChangeSet{
-		Timestamp: time.Unix(ch.ChangeSet.Timestamp, 0),
-		Data:      []byte(ch.ChangeSet.Data),
-		Checksum:  ch.ChangeSet.Checksum,
-		Source:    ch.ChangeSet.Source,
-	}
-
-	var newChange *source.ChangeSet
-
-	// Set the change at a particular path
-	if len(req.Change.Path) > 0 {
-		// Unpack the data as a go type
-		var data interface{}
-		vals, err := config.Values(&source.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
-		}
-		if err := vals.Get().Scan(&data); err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
-		}
-
-		// Get values from existing change
-		values, err := config.Values(change)
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
-		}
-
-		// Apply the data to the existing change
-		values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
-
-		// Create a new change
-		newChange, err = config.Parse(&source.ChangeSet{Data: values.Bytes()})
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
-		}
-	} else {
-		// No path specified, business as usual
-		newChange, err = config.Parse(change, &source.ChangeSet{
-			Timestamp: time.Unix(req.Change.ChangeSet.Timestamp, 0),
-			Data:      []byte(req.Change.ChangeSet.Data),
-			Checksum:  req.Change.ChangeSet.Checksum,
-			Source:    req.Change.ChangeSet.Source,
-		})
-		if err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
-		}
-	}
-
-	// update change set
-	req.Change.ChangeSet = &proto2.ChangeSet{
-		Timestamp: newChange.Timestamp.Unix(),
-		Data:      string(newChange.Data),
-		Checksum:  newChange.Checksum,
-		Source:    newChange.Source,
+		return fmt.Errorf("[Update] config srv read the current change err: %s", err)
 	}
 
 	if err := db.Update(req.Change); err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Update", err.Error())
+		return fmt.Errorf("[Update] config srv commit update err: %s", err)
 	}
 
-	config.Publish(ctx, &proto.WatchResponse{Id: req.Change.Id, ChangeSet: req.Change.ChangeSet})
+	_ = config.Publish(ctx, &proto.WatchResponse{Id: req.Change.Id, ChangeSet: req.Change.ChangeSet})
 
 	return nil
 }
@@ -207,74 +86,16 @@ func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *prot
 // current implementation of Delete blows away the record completely if Change.ChangeSet.Data is not supplied
 func (c *Config) Delete(ctx context.Context, req *proto.DeleteRequest, rsp *proto.DeleteResponse) error {
 	if req.Change == nil {
-		return errors.BadRequest("go.micro.srv.config.Update", "invalid change")
+		return fmt.Errorf("[Delete] config srv delete err: invalid change")
 	}
 
 	if len(req.Change.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Update", "invalid id")
+		return fmt.Errorf("[Delete] config srv delete err: invalid id")
 	}
 
-	if req.Change.ChangeSet == nil {
-		req.Change.ChangeSet = &proto2.ChangeSet{}
+	if err := db.Delete(req.Change); err != nil {
+		return fmt.Errorf("[Delete] config srv delete commit err: %s", err)
 	}
-
-	if req.Change.Timestamp == 0 {
-		req.Change.Timestamp = time.Now().Unix()
-	}
-
-	if req.Change.ChangeSet.Timestamp == 0 {
-		req.Change.ChangeSet.Timestamp = time.Now().Unix()
-	}
-
-	// We're going to delete the record as we have no path and no data
-	if len(req.Change.Path) == 0 {
-		if err := db.Delete(req.Change); err != nil {
-			return errors.InternalServerError("go.micro.srv.config.Delete", err.Error())
-		}
-		return nil
-	}
-
-	// We've got a path. Let's update the required path
-
-	// Get the current change set
-	ch, err := db.Read(req.Change.Id)
-	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Delete", err.Error())
-	}
-
-	// Get the current config as values
-	values, err := config.Values(&source.ChangeSet{
-		Timestamp: time.Unix(ch.ChangeSet.Timestamp, 0),
-		Data:      []byte(ch.ChangeSet.Data),
-		Checksum:  ch.ChangeSet.Checksum,
-		Source:    ch.ChangeSet.Source,
-	})
-	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Delete", err.Error())
-	}
-
-	// Delete at the given path
-	values.Del(strings.Split(req.Change.Path, config.PathSplitter)...)
-
-	// Create a change record from the values
-	change, err := config.Parse(&source.ChangeSet{Data: values.Bytes()})
-	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Delete", err.Error())
-	}
-
-	// Update change set
-	req.Change.ChangeSet = &proto2.ChangeSet{
-		Timestamp: change.Timestamp.Unix(),
-		Data:      string(change.Data),
-		Checksum:  change.Checksum,
-		Source:    change.Source,
-	}
-
-	if err := db.Update(req.Change); err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Delete", err.Error())
-	}
-
-	config.Publish(ctx, &proto.WatchResponse{Id: req.Change.Id, ChangeSet: req.Change.ChangeSet})
 
 	return nil
 }
@@ -290,7 +111,7 @@ func (c *Config) Search(ctx context.Context, req *proto.SearchRequest, rsp *prot
 
 	changes, err := db.Search(req.Id, req.Author, req.Limit, req.Offset)
 	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Search", err.Error())
+		return fmt.Errorf("[Search] config srv search err: %s", err)
 	}
 
 	for _, ch := range changes {
@@ -304,12 +125,12 @@ func (c *Config) Search(ctx context.Context, req *proto.SearchRequest, rsp *prot
 
 func (c *Config) Watch(ctx context.Context, req *proto.WatchRequest, stream proto.Config_WatchStream) error {
 	if len(req.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Watch", "invalid id")
+		return fmt.Errorf("[Watch] config srv err: invalid id")
 	}
 
 	watch, err := config.Watch(req.Id)
 	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.Watch", err.Error())
+		return fmt.Errorf("[Watch] config srv watch err: %s", err)
 	}
 	defer watch.Stop()
 
@@ -317,12 +138,12 @@ func (c *Config) Watch(ctx context.Context, req *proto.WatchRequest, stream prot
 		ch, err := watch.Next()
 		if err != nil {
 			stream.Close()
-			return errors.InternalServerError("go.micro.srv.config.Watch", err.Error())
+			return fmt.Errorf("[Watch] config srv watch next err: %s", err)
 		}
 
 		if err := stream.Send(ch); err != nil {
 			stream.Close()
-			return errors.InternalServerError("go.micro.srv.config.Watch", err.Error())
+			return fmt.Errorf("[Watch] config srv watch send err: %s", err)
 		}
 	}
 }
@@ -346,7 +167,7 @@ func (c *Config) AuditLog(ctx context.Context, req *proto.AuditLogRequest, rsp *
 
 	logs, err := db.AuditLog(req.From, req.To, req.Limit, req.Offset, req.Reverse)
 	if err != nil {
-		return errors.InternalServerError("go.micro.srv.config.AuditLog", err.Error())
+		return fmt.Errorf("[AuditLog] config srv err: %s", err)
 	}
 
 	rsp.Changes = logs
