@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	proto "github.com/micro-in-cn/config-srv/proto/config"
 	"github.com/micro/go-micro/client"
-	"github.com/pydio/go-os/config"
-
-	proto "github.com/pydio/config-srv/proto/config"
+	cr "github.com/micro/go-micro/config/reader"
+	"github.com/micro/go-micro/config/reader/json"
+	"github.com/micro/go-micro/config/source"
 	"golang.org/x/net/context"
 )
 
@@ -17,7 +18,7 @@ var (
 	PathSplitter = "/"
 	WatchTopic   = "micro.config.watch"
 
-	reader   config.Reader
+	reader   cr.Reader
 	mtx      sync.RWMutex
 	watchers = make(map[string][]*watcher)
 )
@@ -61,15 +62,15 @@ func (w *watcher) Stop() error {
 }
 
 func Init() error {
-	reader = config.NewReader()
+	reader = json.NewReader()
 	return nil
 }
 
-func Parse(ch ...*config.ChangeSet) (*config.ChangeSet, error) {
-	return reader.Parse(ch...)
+func Merge(ch ...*source.ChangeSet) (*source.ChangeSet, error) {
+	return reader.Merge(ch...)
 }
 
-func Values(ch *config.ChangeSet) (config.Values, error) {
+func Values(ch *source.ChangeSet) (cr.Values, error) {
 	return reader.Values(ch)
 }
 
@@ -102,6 +103,6 @@ func Watcher(ctx context.Context, ch *proto.WatchResponse) error {
 
 // Publish a change
 func Publish(ctx context.Context, ch *proto.WatchResponse) error {
-	req := client.NewPublication(WatchTopic, ch)
+	req := client.NewMessage(WatchTopic, ch)
 	return client.Publish(ctx, req)
 }

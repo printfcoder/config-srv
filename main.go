@@ -3,16 +3,13 @@ package main
 import (
 	"log"
 
+	"github.com/micro-in-cn/config-srv/config"
+	"github.com/micro-in-cn/config-srv/db"
+	"github.com/micro-in-cn/config-srv/db/mysql"
+	"github.com/micro-in-cn/config-srv/handler"
+	proto "github.com/micro-in-cn/config-srv/proto/config"
 	"github.com/micro/cli"
-	proto "github.com/pydio/config-srv/proto/config"
 	"github.com/micro/go-micro"
-
-	"github.com/pydio/config-srv/config"
-	"github.com/pydio/config-srv/handler"
-
-	// db
-	"github.com/pydio/config-srv/db"
-	"github.com/pydio/config-srv/db/mysql"
 )
 
 func main() {
