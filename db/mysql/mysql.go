@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	proto "github.com/micro-in-cn/config-srv/proto/config"
-	"github.com/pydio/config-srv/db"
-	proto2 "github.com/pydio/go-os/config/proto"
-
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/micro-in-cn/config-srv/db"
+	proto "github.com/micro-in-cn/config-srv/proto/config"
 )
 
 var (
@@ -156,7 +154,7 @@ func (m *mysql) Read(id string) (*proto.Change, error) {
 	}
 
 	change := &proto.Change{
-		ChangeSet: &proto2.ChangeSet{},
+		ChangeSet: &proto.ChangeSet{},
 	}
 
 	r := st["read"].QueryRow(id)
@@ -264,7 +262,7 @@ func (m *mysql) Search(id, author string, limit, offset int64) ([]*proto.Change,
 
 	for r.Next() {
 		change := &proto.Change{
-			ChangeSet: &proto2.ChangeSet{},
+			ChangeSet: &proto.ChangeSet{},
 		}
 		if err := r.Scan(
 			&change.Id,
@@ -322,7 +320,7 @@ func (m *mysql) AuditLog(from, to, limit, offset int64, reverse bool) ([]*proto.
 
 		log := &proto.ChangeLog{
 			Change: &proto.Change{
-				ChangeSet: &proto2.ChangeSet{},
+				ChangeSet: &proto.ChangeSet{},
 			},
 		}
 		if err := r.Scan(

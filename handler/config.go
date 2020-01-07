@@ -1,7 +1,6 @@
 package handler
 
 import (
-	proto2 "github.com/pydio/go-os/config/proto"
 	"strings"
 	"time"
 
@@ -49,7 +48,7 @@ func (c *Config) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.Re
 	parts := strings.Split(req.Path, config.PathSplitter)
 
 	// we just want to pass back bytes
-	rsp.Change.ChangeSet.Data = string(values.Get(parts...).Bytes())
+	rsp.Change.ChangeSet.Data = values.Get(parts...).Bytes()
 
 	return nil
 }
@@ -91,7 +90,7 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 		}
 
 		// Set the data at path
-		values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
+		// values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
 
 		// Create the new change
 		newChange, err := config.Merge(&source.ChangeSet{Data: values.Bytes()})
@@ -99,9 +98,9 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
 
-		req.Change.ChangeSet = &proto2.ChangeSet{
+		req.Change.ChangeSet = &proto.ChangeSet{
 			Timestamp: newChange.Timestamp.Unix(),
-			Data:      string(newChange.Data),
+			Data:      newChange.Data,
 			Checksum:  newChange.Checksum,
 			Source:    newChange.Source,
 		}
@@ -167,7 +166,7 @@ func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *prot
 		}
 
 		// Apply the data to the existing change
-		values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
+		// values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
 
 		// Create a new change
 		newChange, err = config.Merge(&source.ChangeSet{Data: values.Bytes()})
@@ -188,9 +187,9 @@ func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *prot
 	}
 
 	// update change set
-	req.Change.ChangeSet = &proto2.ChangeSet{
+	req.Change.ChangeSet = &proto.ChangeSet{
 		Timestamp: newChange.Timestamp.Unix(),
-		Data:      string(newChange.Data),
+		Data:      newChange.Data,
 		Checksum:  newChange.Checksum,
 		Source:    newChange.Source,
 	}
@@ -215,7 +214,7 @@ func (c *Config) Delete(ctx context.Context, req *proto.DeleteRequest, rsp *prot
 	}
 
 	if req.Change.ChangeSet == nil {
-		req.Change.ChangeSet = &proto2.ChangeSet{}
+		req.Change.ChangeSet = &proto.ChangeSet{}
 	}
 
 	if req.Change.Timestamp == 0 {
@@ -254,7 +253,7 @@ func (c *Config) Delete(ctx context.Context, req *proto.DeleteRequest, rsp *prot
 	}
 
 	// Delete at the given path
-	values.Del(strings.Split(req.Change.Path, config.PathSplitter)...)
+	// values.Del(strings.Split(req.Change.Path, config.PathSplitter)...)
 
 	// Create a change record from the values
 	change, err := config.Merge(&source.ChangeSet{Data: values.Bytes()})
@@ -263,9 +262,9 @@ func (c *Config) Delete(ctx context.Context, req *proto.DeleteRequest, rsp *prot
 	}
 
 	// Update change set
-	req.Change.ChangeSet = &proto2.ChangeSet{
+	req.Change.ChangeSet = &proto.ChangeSet{
 		Timestamp: change.Timestamp.Unix(),
-		Data:      string(change.Data),
+		Data:      change.Data,
 		Checksum:  change.Checksum,
 		Source:    change.Source,
 	}

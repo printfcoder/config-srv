@@ -1,9 +1,5 @@
 syntax = "proto3";
 
-package go.micro.srv.config.config;
-
-import "github.com/micro/go-plugins/config/source/mucp/proto/mucp.proto";
-
 service Config {
     rpc Create (CreateRequest) returns (CreateResponse) {
     }
@@ -21,13 +17,21 @@ service Config {
     }
 }
 
+message ChangeSet {
+    bytes data = 1;
+    string checksum = 2;
+    string format = 3;
+    string source = 4;
+    int64 timestamp = 5;
+}
+
 message Change {
     string id = 1;
     string path = 2;
     string author = 3;
     string comment = 4;
     int64 timestamp = 5;
-    mucp.ChangeSet changeSet = 6;
+    ChangeSet changeSet = 6;
 }
 
 message ChangeLog {
@@ -82,7 +86,7 @@ message WatchRequest {
 
 message WatchResponse {
     string id = 1;
-    mucp.ChangeSet changeSet = 2;
+    ChangeSet changeSet = 2;
 }
 
 message AuditLogRequest {
