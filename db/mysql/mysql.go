@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	Url = "root@tcp(127.0.0.1:3306)/config"
+	Url = "root:123@(127.0.0.1:3306)/config?charset=utf8&parseTime=true&loc=Asia%2FShanghai"
 
 	changeQ = map[string]string{
 		"read": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
@@ -63,15 +63,22 @@ func (m *mysql) Init() error {
 
 	parts := strings.Split(Url, "/")
 	if len(parts) != 2 {
-		return errors.New("Invalid database url")
+		return errors.New("Invalid database url ")
 	}
 
 	if len(parts[1]) == 0 {
-		return errors.New("Invalid database name")
+		return errors.New("Invalid database name ")
+	}
+
+	var paramParts []string
+	if strings.Contains(Url, "?") {
+		paramParts = strings.Split(parts[1], "?")
+		parts[1] = paramParts[0]
+		paramParts = paramParts[1:]
 	}
 
 	url := parts[0]
-	database := parts[1]
+	database := "`" + parts[1] + "`"
 
 	if d, err = sql.Open("mysql", url+"/"); err != nil {
 		return err

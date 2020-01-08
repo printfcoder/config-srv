@@ -9,6 +9,7 @@ import (
 	proto "github.com/micro-in-cn/config-srv/proto/config"
 	"github.com/micro/go-micro/config/source"
 	"github.com/micro/go-micro/errors"
+	"github.com/micro/go-micro/util/log"
 	"golang.org/x/net/context"
 )
 
@@ -53,13 +54,17 @@ func (c *Config) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.Re
 	return nil
 }
 
-func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *proto.CreateResponse) error {
+func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *proto.CreateResponse) (err error) {
 	if req.Change == nil || req.Change.ChangeSet == nil {
-		return errors.BadRequest("go.micro.srv.config.Create", "invalid change")
+		err = errors.BadRequest("go.micro.srv.config.Create", "invalid change")
+		log.Error("[Create] err:", err)
+		return err
 	}
 
 	if len(req.Change.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Create", "invalid id")
+		err = errors.BadRequest("go.micro.srv.config.Create", "invalid id")
+		log.Error("[Create] err:", err)
+		return err
 	}
 
 	if req.Change.Timestamp == 0 {
@@ -75,7 +80,9 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 	if len(req.Change.Path) > 0 {
 		// Unpack the data as a go type
 		var data interface{}
-		vals, err := config.Values(&source.ChangeSet{Data: []byte(req.Change.ChangeSet.Data)})
+		vals, err := config.Values(&source.ChangeSet{
+			Data:   req.Change.ChangeSet.Data,
+			Format: req.Change.ChangeSet.Format})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -84,7 +91,9 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 		}
 
 		// Since it's a create request, make new base value
-		values, err := config.Values(&source.ChangeSet{Data: []byte(`{}`)})
+		values, err := config.Values(&source.ChangeSet{
+			Data:   []byte(`{}`),
+			Format: req.Change.ChangeSet.Format})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -93,7 +102,7 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 		// values.Set(data, strings.Split(req.Change.Path, config.PathSplitter)...)
 
 		// Create the new change
-		newChange, err := config.Merge(&source.ChangeSet{Data: values.Bytes()})
+		newChange, err := config.Merge(&source.ChangeSet{Data: values.Bytes(), Format: req.Change.ChangeSet.Format})
 		if err != nil {
 			return errors.InternalServerError("go.micro.srv.config.Create", err.Error())
 		}
@@ -103,6 +112,7 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 			Data:      newChange.Data,
 			Checksum:  newChange.Checksum,
 			Source:    newChange.Source,
+			Format:    newChange.Format,
 		}
 	}
 
@@ -115,13 +125,17 @@ func (c *Config) Create(ctx context.Context, req *proto.CreateRequest, rsp *prot
 	return nil
 }
 
-func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *proto.UpdateResponse) error {
+func (c *Config) Update(ctx context.Context, req *proto.UpdateRequest, rsp *proto.UpdateResponse) (err error) {
 	if req.Change == nil || req.Change.ChangeSet == nil {
-		return errors.BadRequest("go.micro.srv.config.Update", "invalid change")
+		err = errors.BadRequest("go.micro.srv.config.Update", "invalid change")
+		log.Error("[Update] err:", err)
+		return err
 	}
 
 	if len(req.Change.Id) == 0 {
-		return errors.BadRequest("go.micro.srv.config.Update", "invalid id")
+		err = errors.BadRequest("go.micro.srv.config.Update", "invalid id")
+		log.Error("[Update] err:", err)
+		return err
 	}
 
 	if req.Change.Timestamp == 0 {

@@ -45,13 +45,13 @@ Config
 ### Config.Create
 Create a record with id "NAMESPACE:CONFIG" at the path "supported_phones"
 ```shell
-$ micro query go.micro.srv.config Config.Create '{
+$ micro call go.micro.srv.config Config.Create '{
 	"change": {
 		"id": "NAMESPACE:CONFIG",
 		"path": "supported_phones",
 		"author": "asim",
 		"comment": "adding ios phones", 
-		"change_set": { "data": "{\"ios\": [\"4.0\", \"5s\", \"6\"]}"}
+		"changeSet": { "data": "{\"ios\": [\"4.0\", \"5s\", \"6\"]}"}
 	}
 }'
 
