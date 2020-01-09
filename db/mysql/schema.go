@@ -11,6 +11,7 @@ timestamp int(11),
 changeset_timestamp int(11),
 changeset_checksum varchar(255),
 changeset_data blob,
+changeset_format varchar(255),
 changeset_source varchar(255),
 index(id, author),
 index(timestamp));
@@ -28,6 +29,7 @@ timestamp int(11),
 changeset_timestamp int(11),
 changeset_checksum varchar(255),
 changeset_data blob,
+changeset_format varchar(255),
 changeset_source varchar(255),
 index(timestamp));
 `

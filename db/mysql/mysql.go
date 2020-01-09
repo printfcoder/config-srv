@@ -15,34 +15,34 @@ var (
 	Url = "root:123@(127.0.0.1:3306)/config?charset=utf8&parseTime=true&loc=Asia%2FShanghai"
 
 	changeQ = map[string]string{
-		"read": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"read": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where id = ? limit 1`,
-		"create": `INSERT INTO %s.%s (id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source) 
-				values(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		"update": `UPDATE %s.%s SET path = ?, author = ?, comment = ?, timestamp = ?, changeset_timestamp = ?, changeset_checksum = ?, changeset_data = ?, 
+		"create": `INSERT INTO %s.%s (id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source) 
+				values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"update": `UPDATE %s.%s SET path = ?, author = ?, comment = ?, timestamp = ?, changeset_timestamp = ?, changeset_checksum = ?, changeset_data = ?, changeset_format = ?,
 				changeset_source = ? where id = ? limit 1`,
 		"delete": `DELETE from %s.%s where id = ? limit 1`,
 
-		"search": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"search": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s limit ? offset ?`,
-		"searchId": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"searchId": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where id = ? limit ? offset ?`,
-		"searchAuthor": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"searchAuthor": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where author = ? limit ? offset ?`,
-		"searchIdAndAuthor": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"searchIdAndAuthor": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where id = ? and author = ? limit ? offset ?`,
 	}
 
 	changeLogQ = map[string]string{
-		"createLog": `INSERT INTO %s.%s (pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source) 
-				values(null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		"readLog": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"createLog": `INSERT INTO %s.%s (pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source) 
+				values(null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"readLog": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s limit ? offset ?`,
-		"readBetween": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"readBetween": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where timestamp >= ? and timestamp <= ? limit ? offset ?`,
-		"readLogDesc": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"readLogDesc": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s order by pid desc limit ? offset ?`,
-		"readBetweenDesc": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_source 
+		"readBetweenDesc": `SELECT pid, action, id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where timestamp >= ? and timestamp <= ? order by pid desc limit ? offset ?`,
 	}
 
@@ -129,6 +129,7 @@ func (m *mysql) Create(change *proto.Change) error {
 		change.ChangeSet.Timestamp,
 		change.ChangeSet.Checksum,
 		change.ChangeSet.Data,
+		change.ChangeSet.Format,
 		change.ChangeSet.Source,
 	)
 	if err != nil {
@@ -146,6 +147,7 @@ func (m *mysql) Create(change *proto.Change) error {
 		change.ChangeSet.Timestamp,
 		change.ChangeSet.Checksum,
 		change.ChangeSet.Data,
+		change.ChangeSet.Format,
 		change.ChangeSet.Source,
 	)
 	if err != nil {
@@ -174,6 +176,7 @@ func (m *mysql) Read(id string) (*proto.Change, error) {
 		&change.ChangeSet.Timestamp,
 		&change.ChangeSet.Checksum,
 		&change.ChangeSet.Data,
+		&change.ChangeSet.Format,
 		&change.ChangeSet.Source,
 	); err != nil {
 		if err == sql.ErrNoRows {
@@ -202,6 +205,7 @@ func (m *mysql) Delete(change *proto.Change) error {
 		change.ChangeSet.Timestamp,
 		change.ChangeSet.Checksum,
 		change.ChangeSet.Data,
+		change.ChangeSet.Format,
 		change.ChangeSet.Source,
 	)
 	if err != nil {
@@ -219,6 +223,7 @@ func (m *mysql) Update(change *proto.Change) error {
 		change.ChangeSet.Timestamp,
 		change.ChangeSet.Checksum,
 		change.ChangeSet.Data,
+		change.ChangeSet.Format,
 		change.ChangeSet.Source,
 		change.Id,
 	)
@@ -237,6 +242,7 @@ func (m *mysql) Update(change *proto.Change) error {
 		change.ChangeSet.Timestamp,
 		change.ChangeSet.Checksum,
 		change.ChangeSet.Data,
+		change.ChangeSet.Format,
 		change.ChangeSet.Source,
 	)
 	if err != nil {
@@ -280,6 +286,7 @@ func (m *mysql) Search(id, author string, limit, offset int64) ([]*proto.Change,
 			&change.ChangeSet.Timestamp,
 			&change.ChangeSet.Checksum,
 			&change.ChangeSet.Data,
+			&change.ChangeSet.Format,
 			&change.ChangeSet.Source,
 		); err != nil {
 			if err == sql.ErrNoRows {
@@ -341,6 +348,7 @@ func (m *mysql) AuditLog(from, to, limit, offset int64, reverse bool) ([]*proto.
 			&log.Change.ChangeSet.Timestamp,
 			&log.Change.ChangeSet.Checksum,
 			&log.Change.ChangeSet.Data,
+			&log.Change.ChangeSet.Format,
 			&log.Change.ChangeSet.Source,
 		); err != nil {
 			if err == sql.ErrNoRows {

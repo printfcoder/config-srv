@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	// We need a path splitter since its structured in go-os
 	PathSplitter = "/"
 	WatchTopic   = "micro.config.watch"
 
