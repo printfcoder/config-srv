@@ -15,21 +15,21 @@ var (
 	Url = "root:123@(127.0.0.1:3306)/config?charset=utf8&parseTime=true&loc=Asia%2FShanghai"
 
 	changeQ = map[string]string{
-		"read": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
+		"read": `SELECT id, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where id = ? limit 1`,
-		"create": `INSERT INTO %s.%s (id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source) 
-				values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		"update": `UPDATE %s.%s SET path = ?, author = ?, comment = ?, timestamp = ?, changeset_timestamp = ?, changeset_checksum = ?, changeset_data = ?, changeset_format = ?,
+		"create": `INSERT INTO %s.%s (id, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source) 
+				values(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"update": `UPDATE %s.%s SET author = ?, comment = ?, timestamp = ?, changeset_timestamp = ?, changeset_checksum = ?, changeset_data = ?, changeset_format = ?,
 				changeset_source = ? where id = ? limit 1`,
 		"delete": `DELETE from %s.%s where id = ? limit 1`,
 
-		"search": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
+		"search": `SELECT id, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s limit ? offset ?`,
-		"searchId": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
+		"searchId": `SELECT id, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where id = ? limit ? offset ?`,
-		"searchAuthor": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
+		"searchAuthor": `SELECT id, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where author = ? limit ? offset ?`,
-		"searchIdAndAuthor": `SELECT id, path, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
+		"searchIdAndAuthor": `SELECT id, author, comment, timestamp, changeset_timestamp, changeset_checksum, changeset_data, changeset_format, changeset_source 
 				from %s.%s where id = ? and author = ? limit ? offset ?`,
 	}
 
@@ -122,7 +122,6 @@ func (m *mysql) Create(change *proto.Change) error {
 	// create change entry
 	_, err := st["create"].Exec(
 		change.Id,
-		change.Path,
 		change.Author,
 		change.Comment,
 		change.Timestamp,
@@ -169,7 +168,6 @@ func (m *mysql) Read(id string) (*proto.Change, error) {
 	r := st["read"].QueryRow(id)
 	if err := r.Scan(
 		&change.Id,
-		&change.Path,
 		&change.Author,
 		&change.Comment,
 		&change.Timestamp,
@@ -216,7 +214,6 @@ func (m *mysql) Delete(change *proto.Change) error {
 
 func (m *mysql) Update(change *proto.Change) error {
 	_, err := st["update"].Exec(
-		change.Path,
 		change.Author,
 		change.Comment,
 		change.Timestamp,
@@ -279,7 +276,6 @@ func (m *mysql) Search(id, author string, limit, offset int64) ([]*proto.Change,
 		}
 		if err := r.Scan(
 			&change.Id,
-			&change.Path,
 			&change.Author,
 			&change.Comment,
 			&change.Timestamp,

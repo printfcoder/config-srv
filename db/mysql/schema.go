@@ -4,7 +4,6 @@ var (
 	changeSchema = `
 CREATE TABLE IF NOT EXISTS configs (
 id varchar(255) not null primary key,
-path text,
 author varchar(255),
 comment text,
 timestamp int(11),

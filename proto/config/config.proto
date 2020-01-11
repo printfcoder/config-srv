@@ -100,6 +100,8 @@ message AuditLogRequest {
     int64 offset = 4;
     // reverse the order
     bool reverse = 5;
+    // total
+    int64 total = 6;
 }
 
 message AuditLogResponse {

@@ -11,3 +11,9 @@ $ go test -v api_test.go -run TestCreate
 ```bash
 $ go test -v api_test.go -run TestCreate
 ```
+
+## Search
+
+```bash
+$ go test -v api_test.go -run TestSearch
+```
